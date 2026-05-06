@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Painel de Auditoria SCDP{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Processos Analisados</h1>
+    <div class="subtitle">Histórico de auditorias realizadas pelo bot</div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="cards">
+  <div class="card">
+    <div class="card-label">Total Analisados</div>
+    <div class="card-value">{{ stats.total }}</div>
+  </div>
+  <div class="card green">
+    <div class="card-label">Para Aprovar</div>
+    <div class="card-value">{{ stats.aprovar }}</div>
+  </div>
+  <div class="card red">
+    <div class="card-label">Para Devolver</div>
+    <div class="card-value">{{ stats.devolver }}</div>
+  </div>
+  {% if stats.total > 0 %}
+  <div class="card">
+    <div class="card-label">Taxa de Conformidade</div>
+    <div class="card-value" style="font-size:24px">
+      {{ "%.0f"|format(stats.aprovar / stats.total * 100) }}%
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filtros -->
+<div class="filter-bar">
+  <input type="text" id="search" placeholder="Buscar por PCDP ou proposto…" oninput="applyFilters()">
+
+  <div class="filter-group">
+    <span class="filter-label">Status</span>
+    <button class="filter-btn active" data-filter="status" data-value="">Todos</button>
+    <button class="filter-btn" data-filter="status" data-value="DEVOLVER">Devolver</button>
+    <button class="filter-btn" data-filter="status" data-value="APROVAR">Aprovar</button>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Gravidade</span>
+    <button class="filter-btn active" data-filter="grav" data-value="">Todas</button>
+    <button class="filter-btn" data-filter="grav" data-value="critica">Com críticas</button>
+    <button class="filter-btn" data-filter="grav" data-value="atencao">Só ATENÇÃO</button>
+    <button class="filter-btn" data-filter="grav" data-value="ok">Sem inconsistências</button>
+  </div>
+
+  <span class="result-count" id="result-count"></span>
+</div>
+
+<!-- Table -->
+{% if analyses %}
+<div class="table-wrap">
+  <table id="pcdp-table">
+    <thead>
+      <tr>
+        <th>N da PCDP</th>
+        <th>Proposto</th>
+        <th>Data da Análise</th>
+        <th>Inconsistências</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in analyses %}
+      {% set incs = a.inconsistencies | fromjson if a.inconsistencies else [] %}
+      {% set criticas = incs|selectattr('gravidade', 'in', ['CRÍTICA', 'GRAVE'])|list %}
+      {% set atencao  = incs|selectattr('gravidade', 'equalto', 'ATENÇÃO')|list %}
+      <tr data-status="{{ a.status }}"
+          data-critica="{{ 'true' if criticas else 'false' }}"
+          data-atencao="{{ 'true' if (atencao and not criticas) else 'false' }}"
+          data-noinc="{{ 'true' if not incs else 'false' }}"
+          data-text="{{ (a.pcdp_number or '') ~ ' ' ~ (a.proposto or '') }}">
+        <td><strong>{{ a.pcdp_number or '—' }}</strong></td>
+        <td>{{ a.proposto or '—' }}</td>
+        <td>{{ a.analysis_date.strftime('%d/%m/%Y %H:%M') if a.analysis_date else '—' }}</td>
+        <td>
+          {% if incs %}
+            <span style="font-weight:600; color: var(--gray-800)">{{ incs|length }}</span>
+            {% if criticas %}
+              <span class="badge badge-critica" style="margin-left:6px">{{ criticas|length }} crítica{{ 's' if criticas|length > 1 }}</span>
+            {% endif %}
+          {% else %}
+            <span style="color: var(--gray-500)">Nenhuma</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if a.status == 'APROVAR' %}
+            <span class="badge badge-aprovar">Aprovar</span>
+          {% else %}
+            <span class="badge badge-devolver">Devolver</span>
+          {% endif %}
+        </td>
+        <td>
+          <a class="btn btn-primary" href="/pcdp/{{ a.id }}">Ver relatório</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div id="empty-filter" style="display:none; text-align:center; padding:40px 0; color:var(--gray-500); font-size:14px">
+  Nenhum processo corresponde aos filtros selecionados.
+</div>
+{% else %}
+<div style="text-align:center; padding:60px 0; color:var(--gray-500)">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px; opacity:.4">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+  </svg>
+  <p style="font-size:15px; font-weight:600; margin-bottom:4px">Nenhum processo analisado ainda</p>
+  <p style="font-size:13px">Execute o bot para que os relatórios apareçam aqui.</p>
+</div>
+{% endif %}
+
+<script>
+const activeFilters = { status: '', grav: '' };
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const group = btn.dataset.filter;
+    document.querySelectorAll(`.filter-btn[data-filter="${group}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilters[group] = btn.dataset.value;
+    applyFilters();
+  });
+});
+
+function applyFilters() {
+  const q      = document.getElementById('search').value.toLowerCase().trim();
+  const status = activeFilters.status;
+  const grav   = activeFilters.grav;
+  let visible  = 0;
+
+  document.querySelectorAll('#pcdp-table tbody tr').forEach(row => {
+    const matchText   = !q || row.dataset.text.toLowerCase().includes(q);
+    const matchStatus = !status || row.dataset.status === status;
+    let matchGrav = true;
+    if (grav === 'critica') matchGrav = row.dataset.critica === 'true';
+    else if (grav === 'atencao') matchGrav = row.dataset.atencao === 'true';
+    else if (grav === 'ok')      matchGrav = row.dataset.noinc === 'true';
+
+    const show = matchText && matchStatus && matchGrav;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  const total = document.querySelectorAll('#pcdp-table tbody tr').length;
+  const cnt   = document.getElementById('result-count');
+  if (cnt) cnt.textContent = visible < total ? `${visible} de ${total} processos` : `${total} processos`;
+
+  const tableWrap = document.querySelector('.table-wrap');
+  const emptyMsg  = document.getElementById('empty-filter');
+  if (tableWrap && emptyMsg) {
+    tableWrap.style.display = visible > 0 ? '' : 'none';
+    emptyMsg.style.display  = visible > 0 ? 'none' : '';
+  }
+}
+
+applyFilters();
+</script>
+
+{% endblock %}

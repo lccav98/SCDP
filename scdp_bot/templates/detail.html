@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}PCDP {{ analysis.pcdp_number }} — Auditoria SCDP{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="breadcrumb">
+  <a href="/">Painel</a>
+  <span>›</span>
+  PCDP {{ analysis.pcdp_number or analysis.id }}
+</div>
+
+<!-- Page header -->
+<div class="page-header">
+  <div>
+    <h1>RELATÓRIO DE AUDITORIA SCDP</h1>
+    <div class="subtitle">
+      PCDP N {{ analysis.pcdp_number }} — Análise de Conformidade
+    </div>
+    <div class="subtitle" style="margin-top:4px">
+      Auditor: {{ report.auditor or 'Assistente Especialista SCDP' }} &nbsp;|&nbsp;
+      Data: {{ report.data_analise or (analysis.analysis_date.strftime('%d/%m/%Y') if analysis.analysis_date else '—') }}
+      {% if report.autoridade_aprovadora %}
+        <br>Autoridade Aprovadora: {{ report.autoridade_aprovadora }}
+      {% endif %}
+    </div>
+  </div>
+  <div class="page-actions">
+    {% if analysis.status == 'APROVAR' %}
+      <span class="badge badge-aprovar" style="font-size:13px; padding:6px 14px">✔ Aprovar</span>
+    {% else %}
+      <span class="badge badge-devolver" style="font-size:13px; padding:6px 14px">✖ Devolver</span>
+    {% endif %}
+    <a class="btn btn-pdf" href="/pcdp/{{ analysis.id }}/pdf">
+      ↓ Baixar PDF
+    </a>
+    <a class="btn btn-back" href="/">← Voltar</a>
+  </div>
+</div>
+
+<!-- ── 1. IDENTIFICAÇÃO DO PROCESSO ─────────────────────────────────────── -->
+<div class="section-header">1. Identificação do Processo</div>
+
+<table class="info-table">
+  {% set id_fields = [
+    ('N da PCDP',          analysis.pcdp_number),
+    ('Solicitante',         report.solicitante or report.get('Solicitado por')),
+    ('Órgão Solicitante',  report.orgao_solicitante),
+    ('Proposto',           analysis.proposto),
+    ('Tipo de Proposto',   report.tipo_proposto),
+    ('Período da Viagem',  report.periodo_viagem or report.get('Período da Viagem')),
+    ('Data da Solicitação',report.data_solicitacao or report.get('Data da Solicitação')),
+    ('Motivo da Viagem',   report.motivo_viagem or report.get('Motivo da Viagem')),
+    ('Descrição',          report.descricao or report.get('Descrição do Motivo da Viagem')),
+    ('Status no Fluxo',    report.status_fluxo),
+  ] %}
+  {% for label, value in id_fields if value %}
+  <tr>
+    <td>{{ label }}</td>
+    <td>{{ value }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<!-- ── 2. ROTEIRO DA VIAGEM ──────────────────────────────────────────────── -->
+{% set roteiro = report.roteiro or [] %}
+{% if roteiro %}
+<div class="section-header">2. Roteiro da Viagem</div>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Trecho</th><th>Origem</th><th>Destino</th>
+        <th>Permanência</th><th>Tipo</th><th>Transporte</th><th>Início Trabalho</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in roteiro %}
+      <tr>
+        <td>{{ r.trecho }}</td>
+        <td>{{ r.origem }}</td>
+        <td>{{ r.destino }}</td>
+        <td>{{ r.permanencia }}</td>
+        <td>{{ r.tipo }}</td>
+        <td>{{ r.transporte }}</td>
+        <td>{{ r.inicio_trabalho or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- ── 3. DIÁRIAS E RECURSOS ─────────────────────────────────────────────── -->
+{% set diarias = report.diarias or [] %}
+{% set has_emp = report.empenho or report.ptres or report.descricao_empenho or financial %}
+{% if diarias or has_emp %}
+<div class="section-header">3. Diárias Nacionais e Recursos</div>
+
+{% if diarias %}
+<div class="table-wrap" style="margin-bottom:12px">
+  <table>
+    <thead>
+      <tr>
+        <th>Trecho</th><th>Cidade</th><th>Dias</th>
+        <th>% Diária</th><th>N Diárias</th><th>Valor Unitário</th><th>Valor Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in diarias %}
+      <tr>
+        <td>{{ d.trecho }}</td>
+        <td>{{ d.cidade }}</td>
+        <td>{{ d.dias }}</td>
+        <td>{{ d.percentual }}</td>
+        <td>{{ d.n_diarias }}</td>
+        <td>{{ d.valor_unitario }}</td>
+        <td><strong>{{ d.valor_total }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if report.total_diarias %}
+    <tfoot>
+      <tr style="background:var(--light-blue)">
+        <td colspan="6" style="text-align:right; font-weight:700; padding:8px 14px">Total</td>
+        <td style="font-weight:700; color:var(--navy); padding:8px 14px">{{ report.total_diarias }}</td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+{% endif %}
+
+{% if has_emp %}
+<table class="info-table">
+  {% if report.empenho %}<tr><td>Empenho</td><td>{{ report.empenho }}</td></tr>{% endif %}
+  {% if report.ptres %}<tr><td>PTRES</td><td>{{ report.ptres }}</td></tr>{% endif %}
+  {% if report.descricao_empenho %}<tr><td>Descrição do Empenho</td><td>{{ report.descricao_empenho }}</td></tr>{% endif %}
+  {% if report.parcela_prevista %}<tr><td>Parcela Prevista</td><td>{{ report.parcela_prevista }}</td></tr>{% endif %}
+  {% if financial.subtotal_diarias %}<tr><td>Subtotal Diárias</td><td>{{ financial.subtotal_diarias }}</td></tr>{% endif %}
+  {% if financial.subtotal_passagens %}<tr><td>Subtotal Passagens</td><td>{{ financial.subtotal_passagens }}</td></tr>{% endif %}
+</table>
+{% endif %}
+{% endif %}
+
+<!-- ── 4. INCONSISTÊNCIAS IDENTIFICADAS ─────────────────────────────────── -->
+{% if inconsistencias %}
+<div class="section-header">4. Inconsistências Identificadas</div>
+
+{% set critica_n = namespace(count=0) %}
+{% set alerta_n  = namespace(count=0) %}
+{% for inc in inconsistencias %}
+  {% set is_critica = inc.gravidade in ['CRÍTICA', 'GRAVE'] %}
+  {% if is_critica %}
+    {% set critica_n.count = critica_n.count + 1 %}
+    {% set badge_text = 'CRÍTICA' %}
+    {% set badge_num  = critica_n.count %}
+  {% else %}
+    {% set alerta_n.count = alerta_n.count + 1 %}
+    {% set badge_text = 'ALERTA' %}
+    {% set badge_num  = alerta_n.count %}
+  {% endif %}
+
+<div class="inc-card {{ 'critica' if is_critica else 'alerta' }}">
+  <div class="inc-header">
+    <span class="badge {{ 'badge-critica' if is_critica else 'badge-alerta' }}">{{ badge_text }}</span>
+    <span class="inc-title">N {{ badge_num }} — {{ inc.titulo or inc.descricao[:70] }}</span>
+  </div>
+  <div class="inc-body">
+    {% if inc.descricao %}
+    <div class="inc-field"><strong>Descrição:</strong> {{ inc.descricao }}</div>
+    {% endif %}
+    {% if inc.impacto %}
+    <div class="inc-field"><strong>Impacto:</strong> {{ inc.impacto }}</div>
+    {% endif %}
+    {% if inc.justificativa %}
+    <div class="inc-field"><strong>Justificativa apresentada:</strong> {{ inc.justificativa }}</div>
+    {% endif %}
+    {% if inc.fundamento_legal %}
+    <div class="inc-field" style="font-size:12px; color:var(--gray-500); margin-top:6px">
+      Fundamento: {{ inc.fundamento_legal }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- ── 5. PONTOS CONFORMES ───────────────────────────────────────────────── -->
+{% set pontos = report.pontos_conformes or [] %}
+{% if pontos %}
+<div class="section-header">5. Pontos Conformes</div>
+<div style="background:var(--white); border:1px solid var(--gray-200); border-radius:6px; padding:14px 18px">
+  <ul style="list-style:none; padding:0">
+    {% for p in pontos %}
+    <li style="padding:4px 0 4px 18px; position:relative; font-size:13px">
+      <span style="position:absolute; left:0; color:var(--green); font-weight:700">✓</span>
+      {{ p }}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- ── 6. RESUMO DAS INCONSISTÊNCIAS ─────────────────────────────────────── -->
+{% if inconsistencias %}
+{% set sec = 6 if pontos else 5 %}
+<div class="section-header">{{ sec }}. Resumo das Inconsistências</div>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>Tipo</th><th>Descrição Resumida</th><th>Severidade</th></tr>
+    </thead>
+    <tbody>
+      {% for inc in inconsistencias %}
+      {% set is_critica = inc.gravidade in ['CRÍTICA', 'GRAVE'] %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ 'Inconsistência' if is_critica else 'Alerta' }}</td>
+        <td>{{ inc.descricao[:100] }}{% if inc.descricao|length > 100 %}…{% endif %}</td>
+        <td>
+          {% if is_critica %}
+            <span class="badge-critica-text">CRÍTICA</span>
+          {% else %}
+            <span class="badge-media">MÉDIA</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- ── RECOMENDAÇÃO ──────────────────────────────────────────────────────── -->
+{% set is_devolver = analysis.status == 'DEVOLVER' %}
+<div class="rec-box {{ 'devolver' if is_devolver else 'aprovar' }}">
+  <div class="rec-title">
+    {{ 'RECOMENDAÇÃO: DEVOLVER PARA CORREÇÃO / NÃO APROVAR' if is_devolver else 'RECOMENDAÇÃO: APROVAR' }}
+  </div>
+  {% set recs = report.recomendacoes or [] %}
+  {% if is_devolver and recs %}
+  <p class="rec-intro">Este processo apresenta inconsistências que impedem a aprovação imediata.</p>
+  <p class="rec-intro"><strong>Recomenda-se devolver a PCDP ao solicitante para:</strong></p>
+  <ul class="rec-list">
+    {% for r in recs %}
+    <li>{{ r }}</li>
+    {% endfor %}
+  </ul>
+  {% elif not is_devolver %}
+  <p class="rec-intro" style="text-align:center">
+    Este processo está em conformidade com as normas aplicáveis.
+  </p>
+  {% endif %}
+</div>
+
+<!-- ── TEXTO DE DEVOLUÇÃO ────────────────────────────────────────────────── -->
+{% if report.texto_devolucao %}
+<div class="section-header" style="margin-top:28px">Texto de Devolução</div>
+<p style="font-size:12px; color:var(--gray-500); margin-bottom:8px">
+  Texto gerado automaticamente — copie e cole no campo de justificativa do SCDP.
+</p>
+<textarea class="dev-text" rows="10" readonly>{{ report.texto_devolucao }}</textarea>
+{% endif %}
+
+{% endblock %}

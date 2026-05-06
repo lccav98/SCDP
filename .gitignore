@@ -1,3 +1,6 @@
+.env
+.env.example
+session_cookies.json
 __pycache__/
 *.py[cod]
 *$py.class
@@ -21,12 +24,11 @@ wheels/
 venv/
 ENV/
 env/
-.env
 .venv
 *.db
 *.sqlite
 *.sqlite3
 chrome_bot_profile/
-session_cookies.json
 .DS_Store
 *.log
+relatorios/

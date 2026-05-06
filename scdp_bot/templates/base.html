@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Painel de Auditoria SCDP{% endblock %}</title>
+  <style>
+    :root {
+      --navy:          #1B3A5E;
+      --navy-dark:     #122844;
+      --light-blue:    #E8EEF4;
+      --red:           #C0392B;
+      --red-light:     #FDECEA;
+      --orange:        #D35400;
+      --orange-light:  #FEF5EC;
+      --green:         #1E8449;
+      --green-light:   #EAFAF1;
+      --gray-50:       #FAFAFA;
+      --gray-100:      #F5F5F5;
+      --gray-200:      #E0E0E0;
+      --gray-500:      #9E9E9E;
+      --gray-700:      #616161;
+      --gray-800:      #424242;
+      --white:         #FFFFFF;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── NAV ───────────────────────────────────────────────────────────── */
+    nav {
+      background: var(--navy);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .nav-brand {
+      color: var(--white);
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: .3px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-brand svg { opacity: .85; }
+    .nav-links a {
+      color: rgba(255,255,255,.75);
+      text-decoration: none;
+      font-size: 13px;
+      margin-left: 24px;
+      transition: color .15s;
+    }
+    .nav-links a:hover { color: var(--white); }
+
+    /* ── LAYOUT ────────────────────────────────────────────────────────── */
+    main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+    /* ── SECTION HEADER ────────────────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 28px 0 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .section-header::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 18px;
+      background: var(--navy);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* ── CARDS ─────────────────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .card {
+      background: var(--white);
+      border-radius: 8px;
+      padding: 20px 24px;
+      border: 1px solid var(--gray-200);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .card-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
+    .card-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .card.green .card-value { color: var(--green); }
+    .card.red   .card-value { color: var(--red); }
+
+    /* ── TABLE ─────────────────────────────────────────────────────────── */
+    .table-wrap {
+      background: var(--white);
+      border-radius: 8px;
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--light-blue);
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      text-align: left;
+    }
+    tbody tr { border-top: 1px solid var(--gray-200); transition: background .1s; }
+    tbody tr:hover { background: var(--gray-50); }
+    tbody td { padding: 10px 14px; vertical-align: middle; }
+    tbody tr:nth-child(even) td { background: var(--gray-50); }
+
+    /* ── BADGES ────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .badge-aprovar  { background: var(--green-light);  color: var(--green); }
+    .badge-devolver { background: var(--red-light);    color: var(--red);   }
+    .badge-critica  { background: var(--red);           color: var(--white); }
+    .badge-alerta   { background: var(--orange);        color: var(--white); }
+    .badge-media    { color: var(--orange); font-weight: 700; }
+    .badge-critica-text { color: var(--red); font-weight: 700; }
+
+    /* ── BUTTONS ───────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: var(--navy);  color: var(--white); }
+    .btn-outline {
+      background: transparent;
+      color: var(--navy);
+      border: 1.5px solid var(--navy);
+    }
+    .btn-pdf  { background: var(--red);   color: var(--white); }
+    .btn-back { background: var(--gray-100); color: var(--gray-800); border: 1px solid var(--gray-200); }
+
+    /* ── INFO TABLE ────────────────────────────────────────────────────── */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .info-table td { padding: 8px 14px; border-top: 1px solid var(--gray-200); }
+    .info-table td:first-child {
+      width: 200px;
+      font-size: 12px;
+      color: var(--gray-500);
+      font-weight: 500;
+      background: var(--gray-50);
+    }
+    .info-table td:last-child { font-weight: 600; color: var(--gray-800); }
+    .info-table tr:first-child td { border-top: none; }
+
+    /* ── INCONSISTENCY CARDS ───────────────────────────────────────────── */
+    .inc-card {
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 10px;
+      border: 1px solid var(--gray-200);
+    }
+    .inc-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+    }
+    .inc-header .badge { flex-shrink: 0; }
+    .inc-title { font-weight: 700; font-size: 13px; color: var(--gray-800); }
+    .inc-body { padding: 10px 14px; }
+    .inc-field { margin-bottom: 6px; font-size: 13px; line-height: 1.5; }
+    .inc-field strong { color: var(--gray-700); }
+    .inc-card.critica .inc-header { background: var(--red-light); border-bottom: 2px solid var(--red); }
+    .inc-card.critica .inc-body   { background: var(--red-light); border-left: 3px solid var(--red); }
+    .inc-card.alerta  .inc-header { background: var(--orange-light); border-bottom: 2px solid var(--orange); }
+    .inc-card.alerta  .inc-body   { background: var(--orange-light); border-left: 3px solid var(--orange); }
+
+    /* ── RECOMMENDATION BOX ────────────────────────────────────────────── */
+    .rec-box {
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-top: 28px;
+    }
+    .rec-box.devolver {
+      border: 2px solid var(--red);
+      background: var(--red-light);
+    }
+    .rec-box.aprovar {
+      border: 2px solid var(--green);
+      background: var(--green-light);
+    }
+    .rec-title {
+      font-size: 15px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .rec-box.devolver .rec-title { color: var(--red); }
+    .rec-box.aprovar  .rec-title { color: var(--green); }
+    .rec-intro { font-size: 13px; margin-bottom: 10px; }
+    .rec-list { list-style: none; padding: 0; }
+    .rec-list li {
+      font-size: 13px;
+      padding: 3px 0 3px 18px;
+      position: relative;
+    }
+    .rec-list li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--red);
+    }
+
+    /* ── DEVOLUTION TEXT ───────────────────────────────────────────────── */
+    .dev-text {
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      background: var(--gray-100);
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      padding: 16px;
+      width: 100%;
+      resize: vertical;
+      color: var(--gray-800);
+    }
+
+    /* ── PAGE HEADER ───────────────────────────────────────────────────── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .page-header .subtitle {
+      font-size: 13px;
+      color: var(--gray-500);
+      margin-top: 2px;
+    }
+    .page-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* ── BREADCRUMB ────────────────────────────────────────────────────── */
+    .breadcrumb {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-bottom: 16px;
+    }
+    .breadcrumb a { color: var(--navy); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb span { margin: 0 6px; }
+
+    /* ── FILTER BAR ────────────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+    }
+    .filter-bar input[type="text"] {
+      padding: 7px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      background: var(--gray-50);
+      width: 220px;
+    }
+    .filter-bar input[type="text"]:focus { border-color: var(--navy); background: var(--white); }
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .filter-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-right: 4px;
+    }
+    .filter-btn {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1.5px solid var(--gray-200);
+      background: var(--white);
+      color: var(--gray-700);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
+    .filter-btn.active {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: var(--white);
+    }
+    .result-count {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--gray-500);
+      font-weight: 600;
+    }
+
+    /* ── SEARCH (legado) ────────────────────────────────────────────────── */
+    .search-bar { margin-bottom: 16px; }
+    .search-bar input {
+      width: 100%;
+      max-width: 340px;
+      padding: 8px 14px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      background: var(--white);
+    }
+    .search-bar input:focus { border-color: var(--navy); }
+
+    /* ── FOOTER ────────────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      color: var(--gray-500);
+      font-size: 11px;
+      padding: 32px 0 16px;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+    Painel de Auditoria SCDP
+  </a>
+  <div class="nav-links">
+    <a href="/">Processos</a>
+  </div>
+</nav>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  Painel de Auditoria SCDP — gerado automaticamente pelo scdp_bot
+</footer>
+
+</body>
+</html>

@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+LOGGED_IN_NAME = os.getenv("SCDP_LOGGED_IN_NAME", "").strip()
+
 log = logging.getLogger(__name__)
 
 COOKIES_FILE = Path(__file__).parent.parent / "session_cookies.json"
@@ -41,7 +43,6 @@ TWOFACTOR_SELECTORS = [
 ]
 
 SCDP_LOGGED_IN_INDICATORS = [
-    "text=LUIZ CLAUDIO",
     "text=Aprovação",
     ".usuarioLogado",
     "#usuarioLogado",
@@ -121,12 +122,16 @@ def _has_captcha(page) -> bool:
 
 
 def _is_logged_in(page) -> bool:
-    for sel in SCDP_LOGGED_IN_INDICATORS:
-        try:
-            if page.locator(sel).count() > 0:
-                return True
-        except Exception:
-            pass
+    try:
+        url = page.url
+        # Se está na tela de login gov.br, não está logado
+        if "login" in url.lower() or "acesso.gov.br" in url or "home.xhtml" in url:
+            return False
+        # Qualquer página do SCDP que não seja tela de login = sessão ativa
+        if "scdp.gov.br" in url and "home" not in url:
+            return True
+    except Exception:
+        return False
     return False
 
 
