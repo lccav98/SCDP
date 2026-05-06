@@ -20,13 +20,19 @@ brew install tesseract tesseract-lang
 sudo apt install tesseract-ocr tesseract-ocr-por
 ```
 
+### Windows 11
+1. Instalar [Python 3.9+](https://python.org/downloads) — marcar **"Add to PATH"**
+2. Instalar [Git](https://git-scm.com)
+3. Instalar [Tesseract OCR para Windows](https://github.com/UB-Mannheim/tesseract/wiki) — durante a instalação marcar **"Additional language data → Portuguese"**
+4. Anotar o caminho de instalação (ex: `C:\Program Files\Tesseract-OCR\tesseract.exe`)
+
 ---
 
 ## Instalação
 
 ```bash
 # 1. Clonar o repositório
-git clone <url-do-repositorio>
+git clone https://github.com/lccav98/SCDP.git
 cd SCDP
 
 # 2. Criar e ativar ambiente virtual
@@ -52,12 +58,18 @@ SCDP_URL=https://www2.scdp.gov.br/novoscdp/
 HEADLESS=false
 DELAY_MIN=0.3
 DELAY_MAX=0.8
-TESSERACT_PATH=/opt/homebrew/bin/tesseract   # ajuste conforme seu sistema
+
+# Ajuste conforme seu sistema:
+# macOS:   TESSERACT_PATH=/opt/homebrew/bin/tesseract
+# Linux:   TESSERACT_PATH=/usr/bin/tesseract
+# Windows: TESSERACT_PATH=C:\Program Files\Tesseract-OCR\tesseract.exe
+TESSERACT_PATH=/opt/homebrew/bin/tesseract
 ```
 
 Para encontrar o caminho do Tesseract:
 ```bash
-which tesseract
+which tesseract          # macOS / Linux
+where tesseract          # Windows
 ```
 
 ---
@@ -71,11 +83,14 @@ which tesseract
 bash start_chrome_cdp.sh
 ```
 
-**Linux/Windows** — abra o Chrome manualmente:
+**Windows** — use o script PowerShell incluso (executar como Administrador se necessário):
+```powershell
+.\start_chrome_cdp.ps1
+```
+
+**Linux** — abra o Chrome manualmente:
 ```bash
 google-chrome --remote-debugging-port=9222 --profile-directory="Default"
-# ou
-"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
 ```
 
 ### 2. Fazer login no SCDP
@@ -86,6 +101,11 @@ No Chrome que abriu, acesse o SCDP e faça login normalmente (CPF, senha, CAPTCH
 
 Com o ambiente virtual ativo:
 ```bash
+# macOS / Linux
+python -m scdp_bot
+
+# Windows (PowerShell)
+venv\Scripts\activate
 python -m scdp_bot
 ```
 
@@ -100,6 +120,11 @@ O bot vai:
 
 Em outro terminal:
 ```bash
+# macOS / Linux
+python run_dashboard.py 8080
+
+# Windows (PowerShell)
+venv\Scripts\activate
 python run_dashboard.py 8080
 ```
 
